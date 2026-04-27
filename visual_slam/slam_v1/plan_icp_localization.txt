@@ -1,0 +1,91 @@
+PLAN: Map-First + ICP Localization
+====================================
+
+PHASE 1 — MAPPING
+------------------
+Goal: Build a complete, dense point cloud of the space.
+Script: map_builder.py
+
+- Use RealSense D435 depth stream (live or bag)
+- No pose estimation during mapping — accumulate raw depth frames
+- Camera moves slowly, covering all areas and angles
+- Every N frames: lift depth pixels → 3D → voxel-merge into global cloud
+- On exit: save map.ply (dense point cloud, no descriptors needed)
+
+Simple. No features. No matching. Just depth → 3D accumulation.
+The map will have geometry from every direction the user pointed the camera.
+
+
+PHASE 2 — LOCALIZATION
+-----------------------
+Goal: Given saved map.ply, track camera pose in real time using ICP.
+Script: icp_localizer.py
+
+Each frame:
+  1. Read depth frame from camera
+  2. Lift depth pixels → current frame point cloud (sparse, e.g. every 4th pixel)
+  3. ICP: align current frame cloud → global map cloud → gives transform (pose)
+  4. Update trail, display
+
+ICP works because:
+  - It matches GEOMETRY, not descriptors
+  - A flat wall looks the same from any direction
+  - No viewpoint invariance problem
+  - D435 gives dense depth = lots of geometry to align
+
+Open3D has ICP built in:
+  o3d.pipelines.registration.registration_icp(source, target, max_dist, init_pose)
+
+
+KEY PARAMETERS TO TUNE
+-----------------------
+Mapping:
+  VOXEL_SIZE      = 0.05 m   (map density, smaller = more detail, more memory)
+  FRAME_SKIP      = 5        (take every 5th frame during mapping)
+  MAX_DEPTH_M     = 4.0      (don't map things too far away, noisy)
+
+ICP Localization:
+  MAX_DIST        = 0.3 m    (max point-to-point distance for ICP correspondence)
+  ICP_ITERS       = 30       (more = more accurate but slower)
+  FRAME_SKIP      = 2        (localize every 2nd frame)
+  DOWNSAMPLE      = 0.1 m    (voxel downsample current frame before ICP, speeds up)
+
+ICP initial guess:
+  - First frame: identity (assume camera starts at same position as mapping)
+  - Every subsequent frame: use previous pose as initial guess (warm start)
+  - This is why it works in real time — ICP only needs to refine small motion
+
+
+HONEST LIMITATIONS
+------------------
+1. ICP can fail in featureless areas (long blank walls, open floors)
+   → needs some geometric variation to align against
+
+2. ICP is slower than descriptor matching
+   → mitigate with aggressive downsampling of current frame cloud
+
+3. Mapping phase must cover ALL areas the robot will navigate
+   → if a room corner was never mapped, ICP has nothing to align to
+
+4. ICP gives 6DOF pose but can drift on long straight corridors
+   → same as any odometry, loop closure would fix it but we skip that for now
+
+5. Map must be in same coordinate frame as localization start
+   → camera must start at roughly the same position/orientation as mapping started
+
+
+FILE STRUCTURE
+--------------
+visual_slam/
+  map_builder.py       -- Phase 1: build and save map.ply
+  icp_localizer.py     -- Phase 2: load map.ply, localize with ICP, draw trail
+  view_trail.py        -- existing: view saved trail_*.npy
+  view_map.py          -- existing: view saved .ply map
+
+
+BUILD ORDER
+-----------
+Step 1: map_builder.py   (simple, just depth accumulation)
+Step 2: icp_localizer.py (ICP loop, trail output)
+Step 3: test on bag file, tune MAX_DIST and DOWNSAMPLE
+Step 4: test on live camera

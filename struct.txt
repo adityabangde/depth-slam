@@ -1,0 +1,25 @@
+D435 Camera
+    │
+    ▼
+pyrealsense2       ← sensor driver (official Intel SDK)
+    │
+    ▼
+Feature Detection  ← ORB / FAST (OpenCV) — finds keypoints in RGB frames
+    │
+    ▼
+Feature Matching   ← BFMatcher / FLANN — tracks features across frames
+    │
+    ▼
+Visual Odometry    ← Estimate camera motion (R, t) using Essential Matrix
+    │
+    ▼
+Depth Fusion       ← Use D435 depth channel to get real-world 3D positions
+    │
+    ▼
+SLAM Backend       ← Graph optimization: g2o or hand-rolled GraphSLAM
+    │
+    ▼
+2D Occupancy Map   ← Project 3D map onto floor plane for navigation
+    │
+    ▼
+Visualization      ← matplotlib or OpenCV imshow

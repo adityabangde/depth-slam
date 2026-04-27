@@ -1,0 +1,18 @@
+# ── Core ──────────────────────────────────────────────────────────────────────
+numpy>=1.24,<2.0
+opencv-python>=4.8,<5.0       # ORB, BFMatcher, FLANN, PnP, LK optical flow
+open3d>=0.17,<0.19             # 3D visualisation, ICP registration, point clouds
+scipy>=1.11                    # bundle adjustment (least_squares, sparse Jacobian)
+
+# ── Intel RealSense ───────────────────────────────────────────────────────────
+# Requires librealsense runtime to be installed separately:
+#   Windows: https://github.com/IntelRealSense/librealsense/releases  (SDK .exe)
+#   Ubuntu:  follow APT instructions in librealsense docs
+pyrealsense2>=2.54             # RealSense D435 driver + bag file playback
+
+# ── IMU / Serial (optional — only needed for record_rgbd_imu.py) ──────────────
+pyserial>=3.5                  # ESP32 MPU-9250 serial read
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+# matplotlib is only used for offline trajectory plots (trajectory_2d/3d.png)
+matplotlib>=3.7
